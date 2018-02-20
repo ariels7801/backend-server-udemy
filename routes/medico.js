@@ -12,6 +12,8 @@ var Medico = require('../models/medico');
 app.get('/', (req, res, next) => {
 
     Medico.find({})
+        .populate('usuario', 'nombre email')
+        .populate('hospital')
         .exec(
             (err, medicos) => {
 
@@ -40,7 +42,6 @@ app.put('/:id', mdAutenticacion.verificaToken, (req, res) => {
     var body = req.body;
 
     Medico.findById(id, (err, medico) => {
-
 
         if (err) {
             return res.status(500).json({
