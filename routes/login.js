@@ -29,7 +29,7 @@ app.post('/google', (req, res) => {
         //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3],
         (e, login) => {
 
-            if (e){
+            if (e) {
                 return res.status(400).json({
                     ok: false,
                     mensaje: 'Token no válido',
@@ -42,13 +42,66 @@ app.post('/google', (req, res) => {
             // If request specified a G Suite domain:
             //var domain = payload['hd'];
 
-            return res.status(200).json({
-                ok: true,
-                payload: payload
-            });
+            Usuario.findOne({email: payload.email}, (err, usuario) => {
+                if (err) {
+                    return res.status(500).json({
+                        ok: false,
+                        mensaje: 'Error al buscar usuario - login',
+                        errors: e
+                    });
+                }
+
+                if (usuario) {
+                    if (usuario.google === false) {
+                        return res.status(400).json({
+                            ok: false,
+                            mensaje: 'Debe de usar su autentificación normal'
+                        });
+                    } else {
+
+                        // Crear un token!!!
+                        usuario.password = ':)';
+
+                        var token = jwt.sign({usuario: usuario}, SEED, {expiresIn: 14400}); // 4 horas
+
+                        res.status(200).json({
+                            ok: true,
+                            usuario: usuario,
+                            token: token,
+                            id: usuario._id
+                        });
+                    }
+                } else { //Si el correo no existe en la coleccion de usuarios
+
+                    var usuario = new Usuario();
+
+                    usuario.nombre = payload.name;
+                    usuario.email = payload.email;
+                    usuario.password = ':)';
+                    usuario.img = payload.picture;
+                    usuario.google = true;
+
+                    usuario.save((err, usuarioDB)=>{
+                        if (err) {
+                            return res.status(500).json({
+                                ok: false,
+                                mensaje: 'Error al buscar usuario - google',
+                                errors: e
+                            });
+                        }
+
+                        var token = jwt.sign({usuario: usuarioDB}, SEED, {expiresIn: 14400}); // 4 horas
+
+                        res.status(200).json({
+                            ok: true,
+                            usuario: usuarioDB,
+                            token: token,
+                            id: usuarioDB._id
+                        });
+                    })
+                }
+            })
         });
-
-
 })
 // ==========================================
 // Autentificación normal
