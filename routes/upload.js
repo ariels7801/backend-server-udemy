@@ -1,8 +1,13 @@
 var express = require('express');
 
 var fileUpload = require('express-fileupload');
+var fs = require('fs');
 
 var app = express();
+
+var Usuario = require('../models/usuario');
+var Medico = require('../models/medico');
+var Hospital = require('../models/hospital');
 
 // default options
 app.use(fileUpload());
@@ -53,10 +58,10 @@ app.put('/:tipo/:id', (req, res) => {
     var nombreArchivo = `${ id }-${ new Date().getMilliseconds()}.${ extensionArchivo }`;
 
     // Mover el archivo del temporal a un path
-    var path  = `./uploads/${ tipo }/${nombreArchivo}`;
+    var path = `./uploads/${ tipo }/${nombreArchivo}`;
 
-    archivo.mv(path, err =>{
-        if (err){
+    archivo.mv(path, err => {
+        if (err) {
             return res.status(500).json({
                 ok: false,
                 mensaje: 'Error al mover archivo',
@@ -64,14 +69,36 @@ app.put('/:tipo/:id', (req, res) => {
             });
         }
 
-        res.status(200).json({
-            ok: true,
-            mensaje: 'Archivo movido'
-        });
+        subirPorTipo(tipo, id, nombreArchivo, res);
+
     });
 
 
-
 });
+
+function subirPorTipo(tipo, id, nombreArchivo, res) {
+
+    if (tipo == 'usuarios'){
+        Usuario.findById(id, (err, usuario)=>{
+           var pathViejo =  './uploads/usuarios/' + usuario.img;
+
+           //Si existe, elimina la imagen anterior
+           if (fs.existsSync(pathViejo)){
+                fs.unlink(pathViejo);
+           }
+
+           usuario.img = nombreArchivo;
+
+           usuario.save((err, usuarioActualizado)=>{
+
+               return res.status(200).json({
+                   ok: true,
+                   mensaje: 'Imagen de usuario actualizada',
+                   errors: usuarioActualizado
+               })
+           });
+        });
+    }
+}
 
 module.exports = app;
